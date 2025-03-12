@@ -24,7 +24,13 @@ def preprocess_data(hist_data, scaler, time_step=60):
 
 @st.cache_resource
 def load_lstm_model(model_path):
-    return tf.keras.models.load_model(model_path)
+    # Define a custom LSTM that ignores 'time_major'
+    def custom_LSTM(*args, **kwargs):
+        kwargs.pop('time_major', None)  # Remove time_major if present
+        return tf.keras.layers.LSTM(*args, **kwargs)
+    
+    # Load the model using the custom LSTM
+    return tf.keras.models.load_model(model_path, custom_objects={"LSTM": custom_LSTM})
 
 
 # Function to predict the next day
