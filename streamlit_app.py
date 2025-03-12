@@ -22,11 +22,10 @@ def preprocess_data(hist_data, scaler, time_step=60):
         X.append(a)
     return np.array(X)
 
-# Load LSTM model
-@st.cache(allow_output_mutation=True)
+@st.cache_resource
 def load_lstm_model(model_path):
-    model = tf.keras.models.load_model(model_path)
-    return model
+    return tf.keras.models.load_model(model_path)
+
 
 # Function to predict the next day
 def predict_next_day(model, last_60_days_scaled):
