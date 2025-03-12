@@ -15,7 +15,7 @@ def fetch_historical_data(ticker, period="1y", interval="1h"):
 
 # Function to preprocess data
 def preprocess_data(hist_data, scaler, time_step=60):
-    scaled_data = scaler.transform(hist_data['Close'].values.reshape(-1,1))
+    scaled_data = scaler.transform(hist_data['Close'].values.reshape(-1, 1))
     X = []
     for i in range(len(scaled_data) - time_step - 1):
         a = scaled_data[i:(i + time_step), 0]
@@ -32,7 +32,6 @@ def load_lstm_model(model_path):
     # Load the model using the custom LSTM
     return tf.keras.models.load_model(model_path, custom_objects={"LSTM": custom_LSTM})
 
-
 # Function to predict the next day
 def predict_next_day(model, last_60_days_scaled):
     last_60_days_scaled = last_60_days_scaled.reshape(1, 60, 1)
@@ -45,17 +44,21 @@ def main():
 
     # Dropdown menu for asset selection
     selected_asset = st.selectbox(
-    "Choose an asset for prediction:",
-    ("META", "BTC-USD", "AAPL", "PEPECOIN-USD"), index=0)
+        "Choose an asset for prediction:",
+        ("META", "BTC-USD", "AAPL", "PEPECOIN-USD"), index=0
+    )
 
-if selected_asset == "META":
-    lstm_model = load_lstm_model('lstmm_model.h5')
-elif selected_asset == "BTC-USD":
-    lstm_model = load_lstm_model('btc_lstm_model.h5')
-elif selected_asset == "AAPL":
-    lstm_model = load_lstm_model('aapl_lstm_model.h5')
-elif selected_asset == "PEPECOIN-USD":
-    lstm_model = load_lstm_model('pepecoin_lstm_model.h5')
+    # Load the appropriate LSTM model based on selection
+    if selected_asset == "META":
+        lstm_model = load_lstm_model('lstmm_model.h5')
+    elif selected_asset == "BTC-USD":
+        lstm_model = load_lstm_model('btc_lstm_model.h5')
+    elif selected_asset == "AAPL":
+        lstm_model = load_lstm_model('aapl_lstm_model.h5')
+    elif selected_asset == "PEPECOIN-USD":
+        lstm_model = load_lstm_model('pepecoin_lstm_model.h5')
+
+    # When the user clicks "Predict", perform prediction
     if st.button("Predict"):
         with st.spinner('Fetching data and making prediction...'):
             # Fetch historical data for the selected asset
@@ -63,7 +66,7 @@ elif selected_asset == "PEPECOIN-USD":
 
             # Initialize and fit scaler
             scaler = MinMaxScaler(feature_range=(0, 1))
-            scaler.fit(hist_data['Close'].values.reshape(-1,1))
+            scaler.fit(hist_data['Close'].values.reshape(-1, 1))
 
             # Preprocess data for prediction
             X = preprocess_data(hist_data, scaler)
@@ -104,13 +107,16 @@ elif selected_asset == "PEPECOIN-USD":
                 for _ in range(7):
                     next_day_price_scaled = predict_next_day(lstm_model, last_60_days_scaled)
                     forecast_prices.append(scaler.inverse_transform(next_day_price_scaled)[0, 0])
-
                     # Update last 60 days with the new prediction
                     last_60_days_scaled = np.append(last_60_days_scaled[1:], next_day_price_scaled, axis=0)
 
                 fig.add_trace(go.Scatter(x=forecast_dates, y=forecast_prices, mode='lines+markers', name='7-Day Forecast'))
 
-                fig.update_layout(title='Predicted vs Actual Stock Prices with 7-Day Forecast', xaxis_title='Date', yaxis_title='Price')
+                fig.update_layout(
+                    title='Predicted vs Actual Stock Prices with 7-Day Forecast',
+                    xaxis_title='Date',
+                    yaxis_title='Price'
+                )
                 
                 st.plotly_chart(fig)
             else:
@@ -118,6 +124,7 @@ elif selected_asset == "PEPECOIN-USD":
 
 if __name__ == "__main__":
     main()
+
 
 
 
