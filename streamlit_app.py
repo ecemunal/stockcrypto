@@ -63,7 +63,7 @@ def main():
     # Let the user choose forecast horizons (in days)
     forecast_options = st.multiselect(
         "Select forecast horizons (days):",
-        options=[7, 30, 60, 180, 270 365],
+        options=[7, 30, 60, 180, 270, 365],
         default=[7]  # default selection
     )
     
