@@ -41,13 +41,14 @@ def predict_next_day(model, last_60_days_scaled):
 def main():
     st.title("Stock and Cryptocurrency Price Prediction using LSTM")
     
-    # Dropdown menu for asset selection
+    # Dropdown menu for asset selection (including the new ticker)
     selected_asset = st.selectbox(
         "Choose an asset for prediction:",
-        ("META", "BTC-USD", "AAPL", "PEPECOIN-USD"), index=0
+        ("META", "BTC-USD", "AAPL", "PEPECOIN-USD", "PEPE24478-USD"), index=0
     )
     
-    # Load the appropriate LSTM model based on selection
+    # Load the appropriate LSTM model based on selection.
+    # Make sure you have trained and saved these model files.
     if selected_asset == "META":
         lstm_model = load_lstm_model('lstmm_model.h5')
     elif selected_asset == "BTC-USD":
@@ -56,6 +57,8 @@ def main():
         lstm_model = load_lstm_model('aapl_lstm_model.h5')
     elif selected_asset == "PEPECOIN-USD":
         lstm_model = load_lstm_model('pepecoin_lstm_model.h5')
+    elif selected_asset == "PEPE24478-USD":
+        lstm_model = load_lstm_model('pepe24478_lstm_model.h5')
     
     # Let the user choose forecast horizons (in days)
     forecast_options = st.multiselect(
@@ -81,7 +84,6 @@ def main():
             predicted = lstm_model.predict(X)
             predicted_prices = scaler.inverse_transform(predicted).flatten()
             
-            # Ensure there's enough data for plotting historical predictions
             if len(predicted_prices) > 0:
                 actual_prices = hist_data['Close'].values[-len(predicted_prices):]
                 predicted_dates = hist_data.index[-len(predicted_prices):]
@@ -105,7 +107,6 @@ def main():
                 # Generate forecasts for each selected horizon
                 forecast_results = {}
                 for horizon in forecast_options:
-                    # Copy the last 60 days scaled values to start forecasting
                     last_60_days_scaled_copy = scaler.transform(hist_data['Close'].values[-60:].reshape(-1, 1)).copy()
                     forecast_prices = []
                     forecast_dates = [predicted_dates[-1] + timedelta(days=i) for i in range(1, horizon + 1)]
@@ -113,12 +114,11 @@ def main():
                     for _ in range(horizon):
                         next_day_price_scaled = predict_next_day(lstm_model, last_60_days_scaled_copy)
                         forecast_prices.append(scaler.inverse_transform(next_day_price_scaled)[0, 0])
-                        # Update the last 60 days with the new prediction
                         last_60_days_scaled_copy = np.append(last_60_days_scaled_copy[1:], next_day_price_scaled, axis=0)
                     
                     forecast_results[horizon] = (forecast_dates, forecast_prices)
                 
-                # Add a separate trace for each forecast horizon
+                # Add separate traces for each forecast horizon
                 for horizon, (dates, prices) in forecast_results.items():
                     fig.add_trace(go.Scatter(x=dates, y=prices, mode='lines+markers', name=f'{horizon}-Day Forecast'))
                 
