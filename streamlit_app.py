@@ -45,17 +45,17 @@ def main():
 
     # Dropdown menu for asset selection
     selected_asset = st.selectbox(
-        "Choose an asset for prediction:",
-        ("META", "BTC-USD", "AAPL"), index=0)  # Default to META
+    "Choose an asset for prediction:",
+    ("META", "BTC-USD", "AAPL", "PEPECOIN-USD"), index=0)
 
-    # Load the appropriate LSTM model based on selection
-    if selected_asset == "META":
-        lstm_model = load_lstm_model('lstmm_model.h5')
-    elif selected_asset == "BTC-USD":
-        lstm_model = load_lstm_model('btc_lstm_model.h5')
-    elif selected_asset == "AAPL":
-        lstm_model = load_lstm_model('aapl_lstm_model.h5')
-
+if selected_asset == "META":
+    lstm_model = load_lstm_model('lstmm_model.h5')
+elif selected_asset == "BTC-USD":
+    lstm_model = load_lstm_model('btc_lstm_model.h5')
+elif selected_asset == "AAPL":
+    lstm_model = load_lstm_model('aapl_lstm_model.h5')
+elif selected_asset == "PEPECOIN-USD":
+    lstm_model = load_lstm_model('pepecoin_lstm_model.h5')
     if st.button("Predict"):
         with st.spinner('Fetching data and making prediction...'):
             # Fetch historical data for the selected asset
