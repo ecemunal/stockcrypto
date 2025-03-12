@@ -38,16 +38,15 @@ def predict_next_day(model, last_60_days_scaled):
     predicted_price_scaled = model.predict(last_60_days_scaled)
     return predicted_price_scaled
 
-# Streamlit UI
 def main():
     st.title("Stock and Cryptocurrency Price Prediction using LSTM")
-
+    
     # Dropdown menu for asset selection
     selected_asset = st.selectbox(
         "Choose an asset for prediction:",
         ("META", "BTC-USD", "AAPL", "PEPECOIN-USD"), index=0
     )
-
+    
     # Load the appropriate LSTM model based on selection
     if selected_asset == "META":
         lstm_model = load_lstm_model('lstmm_model.h5')
@@ -57,75 +56,76 @@ def main():
         lstm_model = load_lstm_model('aapl_lstm_model.h5')
     elif selected_asset == "PEPECOIN-USD":
         lstm_model = load_lstm_model('pepecoin_lstm_model.h5')
-
-    # When the user clicks "Predict", perform prediction
+    
+    # Let the user choose forecast horizons (in days)
+    forecast_options = st.multiselect(
+        "Select forecast horizons (days):",
+        options=[7, 30, 60, 365],
+        default=[7]  # default selection
+    )
+    
     if st.button("Predict"):
         with st.spinner('Fetching data and making prediction...'):
             # Fetch historical data for the selected asset
             hist_data = fetch_historical_data(selected_asset)
-
+            
             # Initialize and fit scaler
             scaler = MinMaxScaler(feature_range=(0, 1))
             scaler.fit(hist_data['Close'].values.reshape(-1, 1))
-
+            
             # Preprocess data for prediction
             X = preprocess_data(hist_data, scaler)
-
+            
             # Predict on historical data
             X = X.reshape(X.shape[0], X.shape[1], 1)
             predicted = lstm_model.predict(X)
             predicted_prices = scaler.inverse_transform(predicted).flatten()
-
-            # Ensure there's enough data for plotting
+            
+            # Ensure there's enough data for plotting historical predictions
             if len(predicted_prices) > 0:
                 actual_prices = hist_data['Close'].values[-len(predicted_prices):]
                 predicted_dates = hist_data.index[-len(predicted_prices):]
-
-                # Create a DataFrame for actual and predicted prices
+                
+                # Create a DataFrame for actual vs. predicted prices
                 prices_df = pd.DataFrame({
                     'Date': predicted_dates,
                     'Actual Price': actual_prices,
                     'Predicted Price': predicted_prices
                 })
-
-                # Calculate variance (difference)
                 prices_df['Variance'] = prices_df['Actual Price'] - prices_df['Predicted Price']
-
-                # Display the DataFrame in Streamlit
+                
                 st.write("Actual vs Predicted Prices with Variance:")
                 st.dataframe(prices_df)
-
+                
+                # Create the plot for historical data
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(x=predicted_dates, y=actual_prices, mode='lines', name='Actual Price'))
                 fig.add_trace(go.Scatter(x=predicted_dates, y=predicted_prices, mode='lines', name='Predicted Price'))
-
-                # Forecast the next 7 days
-                forecast_prices = []
-                forecast_dates = [predicted_dates[-1] + timedelta(days=i) for i in range(1, 8)]
-                last_60_days_scaled = scaler.transform(hist_data['Close'].values[-60:].reshape(-1, 1))
-
-                for _ in range(7):
-                    next_day_price_scaled = predict_next_day(lstm_model, last_60_days_scaled)
-                    forecast_prices.append(scaler.inverse_transform(next_day_price_scaled)[0, 0])
-                    # Update last 60 days with the new prediction
-                    last_60_days_scaled = np.append(last_60_days_scaled[1:], next_day_price_scaled, axis=0)
-
-                fig.add_trace(go.Scatter(x=forecast_dates, y=forecast_prices, mode='lines+markers', name='7-Day Forecast'))
-
-                fig.update_layout(
-                    title='Predicted vs Actual Stock Prices with 7-Day Forecast',
-                    xaxis_title='Date',
-                    yaxis_title='Price'
-                )
                 
+                # Generate forecasts for each selected horizon
+                forecast_results = {}
+                for horizon in forecast_options:
+                    # Copy the last 60 days scaled values to start forecasting
+                    last_60_days_scaled_copy = scaler.transform(hist_data['Close'].values[-60:].reshape(-1, 1)).copy()
+                    forecast_prices = []
+                    forecast_dates = [predicted_dates[-1] + timedelta(days=i) for i in range(1, horizon + 1)]
+                    
+                    for _ in range(horizon):
+                        next_day_price_scaled = predict_next_day(lstm_model, last_60_days_scaled_copy)
+                        forecast_prices.append(scaler.inverse_transform(next_day_price_scaled)[0, 0])
+                        # Update the last 60 days with the new prediction
+                        last_60_days_scaled_copy = np.append(last_60_days_scaled_copy[1:], next_day_price_scaled, axis=0)
+                    
+                    forecast_results[horizon] = (forecast_dates, forecast_prices)
+                
+                # Add a separate trace for each forecast horizon
+                for horizon, (dates, prices) in forecast_results.items():
+                    fig.add_trace(go.Scatter(x=dates, y=prices, mode='lines+markers', name=f'{horizon}-Day Forecast'))
+                
+                fig.update_layout(title='Predicted vs Actual Prices with Forecast', xaxis_title='Date', yaxis_title='Price')
                 st.plotly_chart(fig)
             else:
                 st.error("Insufficient data for prediction.")
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
